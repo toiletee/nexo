@@ -62,7 +62,6 @@
       margin: auto;
       text-align: center;
       max-width: 320px;
-      transition: opacity 0.2s;
     }
 
     .welcome h1 {
@@ -84,6 +83,7 @@
       font-size: 16px;
       line-height: 1.4;
       word-wrap: break-word;
+      white-space: pre-wrap;
     }
 
     .user {
@@ -192,10 +192,156 @@
 
 <script>
 
+  // ==========================================
+  // NEXO — MEMORIA LOCAL
+  // ==========================================
+
+  let database;
+
+  const request = indexedDB.open("NEXO_Memory", 1);
+
+  request.onupgradeneeded = function(event) {
+
+    database = event.target.result;
+
+    if (!database.objectStoreNames.contains("memories")) {
+
+      const store = database.createObjectStore(
+        "memories",
+        {
+          keyPath: "id",
+          autoIncrement: true
+        }
+      );
+
+      store.createIndex("content", "content", {
+        unique: false
+      });
+
+      store.createIndex("createdAt", "createdAt", {
+        unique: false
+      });
+    }
+  };
+
+  request.onsuccess = function(event) {
+
+    database = event.target.result;
+
+    console.log("NEXO: memoria local preparada.");
+  };
+
+  request.onerror = function() {
+
+    console.error("NEXO: no se pudo abrir la memoria.");
+  };
+
+
+  // ==========================================
+  // GUARDAR RECUERDO
+  // ==========================================
+
+  function saveMemory(content) {
+
+    if (!database) {
+      return false;
+    }
+
+    const transaction = database.transaction(
+      ["memories"],
+      "readwrite"
+    );
+
+    const store = transaction.objectStore("memories");
+
+    store.add({
+      content: content,
+      createdAt: new Date().toISOString()
+    });
+
+    return true;
+  }
+
+
+  // ==========================================
+  // OBTENER TODOS LOS RECUERDOS
+  // ==========================================
+
+  function getMemories(callback) {
+
+    if (!database) {
+      callback([]);
+      return;
+    }
+
+    const transaction = database.transaction(
+      ["memories"],
+      "readonly"
+    );
+
+    const store = transaction.objectStore("memories");
+
+    const request = store.getAll();
+
+    request.onsuccess = function() {
+
+      callback(request.result);
+    };
+  }
+
+
+  // ==========================================
+  // BORRAR RECUERDOS
+  // ==========================================
+
+  function deleteMemories(searchText, callback) {
+
+    if (!database) {
+      callback(0);
+      return;
+    }
+
+    getMemories(function(memories) {
+
+      const transaction = database.transaction(
+        ["memories"],
+        "readwrite"
+      );
+
+      const store = transaction.objectStore("memories");
+
+      let deleted = 0;
+
+      const search = searchText.toLowerCase();
+
+      memories.forEach(function(memory) {
+
+        if (memory.content.toLowerCase().includes(search)) {
+
+          store.delete(memory.id);
+
+          deleted++;
+        }
+      });
+
+      transaction.oncomplete = function() {
+
+        callback(deleted);
+      };
+
+    });
+  }
+
+
+  // ==========================================
+  // INTERFAZ
+  // ==========================================
+
   const input = document.getElementById("messageInput");
   const sendButton = document.getElementById("sendButton");
   const chat = document.getElementById("chat");
   const welcome = document.getElementById("welcome");
+
 
   function addMessage(text, type) {
 
@@ -206,6 +352,7 @@
     const message = document.createElement("div");
 
     message.className = "message " + type;
+
     message.textContent = text;
 
     chat.appendChild(message);
@@ -213,22 +360,155 @@
     chat.scrollTop = chat.scrollHeight;
   }
 
+
+  // ==========================================
+  // PROCESAR MENSAJE
+  // ==========================================
+
   function sendMessage() {
 
     const text = input.value.trim();
 
-    if (!text) return;
+    if (!text) {
+      return;
+    }
 
     addMessage(text, "user");
 
     input.value = "";
 
-    /*
-      NEXO todavía no tiene cerebro.
-      Esta respuesta es solamente temporal.
-    */
+    processMessage(text);
+  }
 
-    setTimeout(() => {
+
+  function processMessage(text) {
+
+    const lower = text.toLowerCase();
+
+
+    // ------------------------------------------
+    // RECORDAR
+    // ------------------------------------------
+
+    if (
+      lower.startsWith("recuerda ") ||
+      lower.startsWith("recuerda que ") ||
+      lower.startsWith("nexo, recuerda ")
+    ) {
+
+      let memory = text
+        .replace(/^nexo,\s*/i, "")
+        .replace(/^recuerda que\s+/i, "")
+        .replace(/^recuerda\s+/i, "")
+        .trim();
+
+      if (memory.length > 0) {
+
+        const saved = saveMemory(memory);
+
+        if (saved) {
+
+          addMessage(
+            "Lo recordaré. 🧠",
+            "nexo"
+          );
+
+        } else {
+
+          addMessage(
+            "He tenido un problema guardando ese recuerdo.",
+            "nexo"
+          );
+        }
+
+        return;
+      }
+    }
+
+
+    // ------------------------------------------
+    // CONSULTAR MEMORIA
+    // ------------------------------------------
+
+    if (
+      lower.includes("qué recuerdas") ||
+      lower.includes("que recuerdas")
+    ) {
+
+      getMemories(function(memories) {
+
+        if (memories.length === 0) {
+
+          addMessage(
+            "Todavía no tengo ningún recuerdo guardado.",
+            "nexo"
+          );
+
+          return;
+        }
+
+        let response =
+          "Esto es lo que tengo guardado:\n\n";
+
+        memories.forEach(function(memory, index) {
+
+          response +=
+            "• " + memory.content + "\n";
+        });
+
+        addMessage(response, "nexo");
+      });
+
+      return;
+    }
+
+
+    // ------------------------------------------
+    // OLVIDAR
+    // ------------------------------------------
+
+    if (
+      lower.startsWith("olvida ") ||
+      lower.startsWith("olvida que ") ||
+      lower.startsWith("nexo, olvida ")
+    ) {
+
+      let search = text
+        .replace(/^nexo,\s*/i, "")
+        .replace(/^olvida que\s+/i, "")
+        .replace(/^olvida\s+/i, "")
+        .trim();
+
+      deleteMemories(search, function(deleted) {
+
+        if (deleted > 0) {
+
+          addMessage(
+            "He eliminado " +
+            deleted +
+            " recuerdo(s). 🗑️",
+            "nexo"
+          );
+
+        } else {
+
+          addMessage(
+            "No he encontrado ese recuerdo.",
+            "nexo"
+          );
+        }
+
+      });
+
+      return;
+    }
+
+
+    // ------------------------------------------
+    // RESPUESTA PROVISIONAL
+    // ------------------------------------------
+
+    setTimeout(function() {
 
       addMessage(
         "Te escucho. Mi cerebro todavía está en construcción 🧠",
@@ -236,17 +516,31 @@
       );
 
     }, 400);
+
   }
 
-  sendButton.addEventListener("click", sendMessage);
 
-  input.addEventListener("keydown", (event) => {
+  // ==========================================
+  // EVENTOS
+  // ==========================================
 
-    if (event.key === "Enter") {
-      sendMessage();
+  sendButton.addEventListener(
+    "click",
+    sendMessage
+  );
+
+
+  input.addEventListener(
+    "keydown",
+    function(event) {
+
+      if (event.key === "Enter") {
+
+        sendMessage();
+      }
+
     }
-
-  });
+  );
 
 </script>
 
