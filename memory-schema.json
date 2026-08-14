@@ -1,1 +1,60 @@
-
+{
+  "version": 1,
+  "memory_rules": {
+    "automatic_conversation_storage": false,
+    "explicit_save_required": true,
+    "user_can_delete": true,
+    "user_can_export": true,
+    "user_can_import": true
+  },
+  "categories": {
+    "profile": {
+      "name": "Perfil",
+      "description": "Información personal estable y preferencias generales."
+    },
+    "people": {
+      "name": "Personas",
+      "description": "Personas importantes para el usuario y relaciones relevantes."
+    },
+    "training": {
+      "name": "Entrenamiento",
+      "description": "Entrenamientos, marcas, objetivos, progreso y datos deportivos."
+    },
+    "projects": {
+      "name": "Proyectos",
+      "description": "Proyectos personales, académicos, profesionales o tecnológicos."
+    },
+    "events": {
+      "name": "Eventos",
+      "description": "Citas, viajes, acontecimientos y fechas importantes."
+    },
+    "goals": {
+      "name": "Objetivos",
+      "description": "Objetivos a corto, medio y largo plazo."
+    },
+    "preferences": {
+      "name": "Preferencias",
+      "description": "Gustos, hábitos y preferencias del usuario."
+    },
+    "other": {
+      "name": "Otros",
+      "description": "Información importante que no encaje en otra categoría."
+    }
+  },
+  "memory_fields": {
+    "id": "unique identifier",
+    "content": "memory content",
+    "category": "memory category",
+    "importance": "low | medium | high",
+    "created_at": "creation timestamp",
+    "updated_at": "last update timestamp",
+    "active": true
+  },
+  "memory_behavior": {
+    "new_memory": "Create a new memory when the user explicitly asks NEXO to remember something.",
+    "update_memory": "Update an existing memory when the user provides newer information that replaces it.",
+    "deactivate_memory": "Mark a memory inactive when it is no longer valid instead of automatically deleting it.",
+    "delete_memory": "Delete a memory when the user explicitly asks NEXO to forget it.",
+    "temporary_conversation": "Do not store normal conversations as memories."
+  }
+}
