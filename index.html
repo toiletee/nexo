@@ -1098,10 +1098,17 @@
         );
       }
 
-      const thinkingMessages = chat.querySelectorAll(".nexo");
+      const thinkingMessages =
+        chat.querySelectorAll(".nexo");
+
       if (thinkingMessages.length > 0) {
-        const lastMessage = thinkingMessages[thinkingMessages.length - 1];
-        if (lastMessage.textContent === "NEXO está pensando…") {
+        const lastMessage =
+          thinkingMessages[thinkingMessages.length - 1];
+
+        if (
+          lastMessage.textContent ===
+          "NEXO está pensando…"
+        ) {
           lastMessage.remove();
         }
       }
@@ -1112,10 +1119,17 @@
 
       console.error("NEXO connection error:", error);
 
-      const thinkingMessages = chat.querySelectorAll(".nexo");
+      const thinkingMessages =
+        chat.querySelectorAll(".nexo");
+
       if (thinkingMessages.length > 0) {
-        const lastMessage = thinkingMessages[thinkingMessages.length - 1];
-        if (lastMessage.textContent === "NEXO está pensando…") {
+        const lastMessage =
+          thinkingMessages[thinkingMessages.length - 1];
+
+        if (
+          lastMessage.textContent ===
+          "NEXO está pensando…"
+        ) {
           lastMessage.remove();
         }
       }
