@@ -487,7 +487,6 @@
 
   </header>
 
-
   <main class="chat" id="chat">
 
     <div class="welcome" id="welcome">
@@ -504,7 +503,6 @@
     </div>
 
   </main>
-
 
   <div class="input-area">
 
@@ -529,7 +527,6 @@
   </div>
 
 </div>
-
 
 <!-- MEMORIA -->
 
@@ -588,68 +585,64 @@
 
 </div>
 
-
 <script>
 
 /* ==========================================
    BASE DE DATOS LOCAL
    ========================================== */
 
-let database;
+let database = null;
 
-const request =
-  indexedDB.open("NEXO_Memory", 1);
+const request = indexedDB.open("NEXO_Memory", 1);
 
+request.onupgradeneeded = function(event) {
 
-request.onupgradeneeded =
-  function(event) {
+  database = event.target.result;
 
-    database =
-      event.target.result;
+  if (!database.objectStoreNames.contains("memories")) {
 
-    if (
-      !database.objectStoreNames
-        .contains("memories")
-    ) {
-
-      const store =
-        database.createObjectStore(
-          "memories",
-          {
-            keyPath: "id",
-            autoIncrement: true
-          }
-        );
-
-      store.createIndex(
-        "content",
-        "content",
-        {
-          unique: false
-        }
-      );
-
-      store.createIndex(
-        "createdAt",
-        "createdAt",
-        {
-          unique: false
-        }
-      );
-    }
-  };
-
-
-request.onsuccess =
-  function(event) {
-
-    database =
-      event.target.result;
-
-    console.log(
-      "NEXO: memoria local preparada."
+    const store = database.createObjectStore(
+      "memories",
+      {
+        keyPath: "id",
+        autoIncrement: true
+      }
     );
-  };
+
+    store.createIndex(
+      "content",
+      "content",
+      {
+        unique: false
+      }
+    );
+
+    store.createIndex(
+      "createdAt",
+      "createdAt",
+      {
+        unique: false
+      }
+    );
+  }
+};
+
+request.onsuccess = function(event) {
+
+  database = event.target.result;
+
+  console.log(
+    "NEXO: memoria local preparada."
+  );
+};
+
+request.onerror = function(event) {
+
+  console.error(
+    "NEXO: error IndexedDB:",
+    event.target.error
+  );
+};
 
 
 /* ==========================================
@@ -660,27 +653,37 @@ function saveMemory(content) {
 
   if (!database) return false;
 
-  const transaction =
-    database.transaction(
+  try {
+
+    const transaction = database.transaction(
       ["memories"],
       "readwrite"
     );
 
-  const store =
-    transaction.objectStore(
+    const store = transaction.objectStore(
       "memories"
     );
 
-  store.add({
+    store.add({
 
-    content:
-      content,
+      content: content,
 
-    createdAt:
-      new Date().toISOString()
-  });
+      createdAt:
+        new Date().toISOString()
 
-  return true;
+    });
+
+    return true;
+
+  } catch (error) {
+
+    console.error(
+      "Error guardando memoria:",
+      error
+    );
+
+    return false;
+  }
 }
 
 
@@ -697,49 +700,51 @@ function getMemories(callback) {
     return;
   }
 
-  const transaction =
-    database.transaction(
-      ["memories"],
-      "readonly"
+  const transaction = database.transaction(
+    ["memories"],
+    "readonly"
+  );
+
+  const store = transaction.objectStore(
+    "memories"
+  );
+
+  const request = store.getAll();
+
+  request.onsuccess = function() {
+
+    callback(
+      request.result || []
+    );
+  };
+
+  request.onerror = function() {
+
+    console.error(
+      "Error obteniendo memorias:",
+      request.error
     );
 
-  const store =
-    transaction.objectStore(
-      "memories"
-    );
-
-  const request =
-    store.getAll();
-
-  request.onsuccess =
-    function() {
-
-      callback(
-        request.result
-      );
-    };
+    callback([]);
+  };
 }
 
 
 /* ==========================================
-   NUEVO: OBTENER MEMORIAS COMO PROMESA
+   OBTENER MEMORIAS COMO PROMESA
    ========================================== */
 
 function getMemoriesAsync() {
 
-  return new Promise(
-    function(resolve) {
+  return new Promise(function(resolve) {
 
-      getMemories(
-        function(memories) {
+    getMemories(function(memories) {
 
-          resolve(memories);
+      resolve(memories);
 
-        }
-      );
+    });
 
-    }
-  );
+  });
 }
 
 
@@ -752,53 +757,49 @@ function deleteMemories(
   callback
 ) {
 
-  getMemories(
-    function(memories) {
+  if (!database) {
 
-      const transaction =
-        database.transaction(
-          ["memories"],
-          "readwrite"
-        );
+    callback(0);
 
-      const store =
-        transaction.objectStore(
-          "memories"
-        );
+    return;
+  }
 
-      let deleted = 0;
+  getMemories(function(memories) {
 
-      const search =
-        searchText.toLowerCase();
+    const transaction = database.transaction(
+      ["memories"],
+      "readwrite"
+    );
 
-      memories.forEach(
-        function(memory) {
+    const store = transaction.objectStore(
+      "memories"
+    );
 
-          if (
-            memory.content
-              .toLowerCase()
-              .includes(search)
-          ) {
+    let deleted = 0;
 
-            store.delete(
-              memory.id
-            );
+    const search =
+      searchText.toLowerCase();
 
-            deleted++;
-          }
-        }
-      );
+    memories.forEach(function(memory) {
 
-      transaction.oncomplete =
-        function() {
+      if (
+        memory.content &&
+        memory.content.toLowerCase().includes(search)
+      ) {
 
-          callback(
-            deleted
-          );
+        store.delete(memory.id);
 
-        };
-    }
-  );
+        deleted++;
+      }
+    });
+
+    transaction.oncomplete = function() {
+
+      callback(deleted);
+
+    };
+
+  });
 }
 
 
@@ -806,30 +807,31 @@ function deleteMemories(
    BORRAR TODO
    ========================================== */
 
-function deleteAllMemories(
-  callback
-) {
+function deleteAllMemories(callback) {
 
-  const transaction =
-    database.transaction(
-      ["memories"],
-      "readwrite"
-    );
+  if (!database) {
 
-  const store =
-    transaction.objectStore(
-      "memories"
-    );
+    callback();
 
-  const request =
-    store.clear();
+    return;
+  }
 
-  request.onsuccess =
-    function() {
+  const transaction = database.transaction(
+    ["memories"],
+    "readwrite"
+  );
 
-      callback();
+  const store = transaction.objectStore(
+    "memories"
+  );
 
-    };
+  const request = store.clear();
+
+  request.onsuccess = function() {
+
+    callback();
+
+  };
 }
 
 
@@ -838,60 +840,40 @@ function deleteAllMemories(
    ========================================== */
 
 const input =
-  document.getElementById(
-    "messageInput"
-  );
+  document.getElementById("messageInput");
 
 const sendButton =
-  document.getElementById(
-    "sendButton"
-  );
+  document.getElementById("sendButton");
 
 const chat =
-  document.getElementById(
-    "chat"
-  );
+  document.getElementById("chat");
 
 const welcome =
-  document.getElementById(
-    "welcome"
-  );
+  document.getElementById("welcome");
 
 const overlay =
-  document.getElementById(
-    "overlay"
-  );
+  document.getElementById("overlay");
 
 const memoryList =
-  document.getElementById(
-    "memoryList"
-  );
+  document.getElementById("memoryList");
 
 const memoryCount =
-  document.getElementById(
-    "memoryCount"
-  );
+  document.getElementById("memoryCount");
 
 
 /* ==========================================
    MENSAJES
    ========================================== */
 
-function addMessage(
-  text,
-  type
-) {
+function addMessage(text, type) {
 
   if (welcome) {
 
-    welcome.style.display =
-      "none";
+    welcome.style.display = "none";
   }
 
   const message =
-    document.createElement(
-      "div"
-    );
+    document.createElement("div");
 
   message.className =
     "message " + type;
@@ -899,9 +881,7 @@ function addMessage(
   message.textContent =
     text;
 
-  chat.appendChild(
-    message
-  );
+  chat.appendChild(message);
 
   chat.scrollTop =
     chat.scrollHeight;
@@ -926,9 +906,7 @@ function sendMessage() {
 
   input.value = "";
 
-  processMessage(
-    text
-  );
+  processMessage(text);
 }
 
 
@@ -952,27 +930,14 @@ function processMessage(text) {
 
     let memory =
       text
-        .replace(
-          /^nexo,\s*/i,
-          ""
-        )
-        .replace(
-          /^recuerda que\s+/i,
-          ""
-        )
-        .replace(
-          /^recuerda\s+/i,
-          ""
-        )
+        .replace(/^nexo,\s*/i, "")
+        .replace(/^recuerda que\s+/i, "")
+        .replace(/^recuerda\s+/i, "")
         .trim();
 
     if (memory.length > 0) {
 
-      if (
-        saveMemory(
-          memory
-        )
-      ) {
+      if (saveMemory(memory)) {
 
         addMessage(
           "Lo recordaré. 🧠",
@@ -995,49 +960,39 @@ function processMessage(text) {
   /* CONSULTAR */
 
   if (
-    lower.includes(
-      "qué recuerdas"
-    ) ||
-    lower.includes(
-      "que recuerdas"
-    )
+    lower.includes("qué recuerdas") ||
+    lower.includes("que recuerdas")
   ) {
 
-    getMemories(
-      function(memories) {
+    getMemories(function(memories) {
 
-        if (
-          memories.length === 0
-        ) {
-
-          addMessage(
-            "Todavía no tengo ningún recuerdo guardado.",
-            "nexo"
-          );
-
-          return;
-        }
-
-        let response =
-          "Esto es lo que recuerdo:\n\n";
-
-        memories.forEach(
-          function(memory) {
-
-            response +=
-              "• " +
-              memory.content +
-              "\n";
-          }
-        );
+      if (memories.length === 0) {
 
         addMessage(
-          response,
+          "Todavía no tengo ningún recuerdo guardado.",
           "nexo"
         );
 
+        return;
       }
-    );
+
+      let response =
+        "Esto es lo que recuerdo:\n\n";
+
+      memories.forEach(function(memory) {
+
+        response +=
+          "• " +
+          memory.content +
+          "\n";
+      });
+
+      addMessage(
+        response,
+        "nexo"
+      );
+
+    });
 
     return;
   }
@@ -1053,27 +1008,16 @@ function processMessage(text) {
 
     let search =
       text
-        .replace(
-          /^nexo,\s*/i,
-          ""
-        )
-        .replace(
-          /^olvida que\s+/i,
-          ""
-        )
-        .replace(
-          /^olvida\s+/i,
-          ""
-        )
+        .replace(/^nexo,\s*/i, "")
+        .replace(/^olvida que\s+/i, "")
+        .replace(/^olvida\s+/i, "")
         .trim();
 
     deleteMemories(
       search,
       function(deleted) {
 
-        if (
-          deleted > 0
-        ) {
+        if (deleted > 0) {
 
           addMessage(
             "He eliminado " +
@@ -1099,9 +1043,7 @@ function processMessage(text) {
 
   /* ENVIAR A GEMINI */
 
-  askNexo(
-    text
-  );
+  askNexo(text);
 }
 
 
@@ -1124,7 +1066,16 @@ async function askNexo(text) {
       await getMemoriesAsync();
 
 
-    /* ENVIAR MENSAJE + MEMORIA */
+    console.log(
+      "NEXO → enviando:",
+      {
+        message: text,
+        memory: memories
+      }
+    );
+
+
+    /* ENVIAR MENSAJE + MEMORIA AL WORKER */
 
     const response =
       await fetch(
@@ -1133,36 +1084,61 @@ async function askNexo(text) {
           method: "POST",
 
           headers: {
-            "Content-Type":
-              "application/json"
+            "Content-Type": "application/json"
           },
 
-          body:
-            JSON.stringify({
+          body: JSON.stringify({
 
-              message:
-                text,
+            message: text,
 
-              memory:
-                memories
+            memory: memories
 
-            })
+          })
         }
       );
 
 
-    const data =
-      await response.json();
+    /* LEER RESPUESTA */
 
+    const rawText =
+      await response.text();
+
+    console.log(
+      "NEXO ← respuesta:",
+      response.status,
+      rawText
+    );
+
+
+    let data;
+
+    try {
+
+      data =
+        JSON.parse(rawText);
+
+    } catch (parseError) {
+
+      throw new Error(
+        "El Worker devolvió una respuesta que no es JSON válido: " +
+        rawText
+      );
+    }
+
+
+    /* COMPROBAR HTTP */
 
     if (!response.ok) {
 
       throw new Error(
         data?.error ||
-        "Error del servidor"
+        "Error del servidor. HTTP " +
+        response.status
       );
     }
 
+
+    /* COMPROBAR RESPUESTA */
 
     const answer =
       data?.response;
@@ -1176,17 +1152,13 @@ async function askNexo(text) {
     }
 
 
-    /* QUITAR "PENSANDO..." */
+    /* QUITAR PENSANDO */
 
     const thinkingMessages =
-      chat.querySelectorAll(
-        ".nexo"
-      );
+      chat.querySelectorAll(".nexo");
 
 
-    if (
-      thinkingMessages.length > 0
-    ) {
+    if (thinkingMessages.length > 0) {
 
       const lastMessage =
         thinkingMessages[
@@ -1220,17 +1192,13 @@ async function askNexo(text) {
     );
 
 
-    /* QUITAR "PENSANDO..." */
+    /* QUITAR PENSANDO */
 
     const thinkingMessages =
-      chat.querySelectorAll(
-        ".nexo"
-      );
+      chat.querySelectorAll(".nexo");
 
 
-    if (
-      thinkingMessages.length > 0
-    ) {
+    if (thinkingMessages.length > 0) {
 
       const lastMessage =
         thinkingMessages[
@@ -1248,8 +1216,11 @@ async function askNexo(text) {
     }
 
 
+    /* MOSTRAR ERROR REAL */
+
     addMessage(
-      "No he podido conectar con mi cerebro ahora mismo.",
+      "Error real de NEXO:\n" +
+      error.message,
       "nexo"
     );
   }
@@ -1272,67 +1243,52 @@ function openMemoryPanel() {
 
 function refreshMemoryPanel() {
 
-  getMemories(
-    function(memories) {
+  getMemories(function(memories) {
 
-      memoryCount.textContent =
-        memories.length +
-        (
-          memories.length === 1
-            ? " recuerdo"
-            : " recuerdos"
-        );
-
-      memoryList.innerHTML =
-        "";
-
-
-      if (
-        memories.length === 0
-      ) {
-
-        const empty =
-          document.createElement(
-            "div"
-          );
-
-        empty.className =
-          "memory-item";
-
-        empty.textContent =
-          "No tienes recuerdos guardados.";
-
-        memoryList.appendChild(
-          empty
-        );
-
-        return;
-      }
-
-
-      memories.forEach(
-        function(memory) {
-
-          const item =
-            document.createElement(
-              "div"
-            );
-
-          item.className =
-            "memory-item";
-
-          item.textContent =
-            memory.content;
-
-          memoryList.appendChild(
-            item
-          );
-
-        }
+    memoryCount.textContent =
+      memories.length +
+      (
+        memories.length === 1
+          ? " recuerdo"
+          : " recuerdos"
       );
 
+    memoryList.innerHTML = "";
+
+
+    if (memories.length === 0) {
+
+      const empty =
+        document.createElement("div");
+
+      empty.className =
+        "memory-item";
+
+      empty.textContent =
+        "No tienes recuerdos guardados.";
+
+      memoryList.appendChild(empty);
+
+      return;
     }
-  );
+
+
+    memories.forEach(function(memory) {
+
+      const item =
+        document.createElement("div");
+
+      item.className =
+        "memory-item";
+
+      item.textContent =
+        memory.content;
+
+      memoryList.appendChild(item);
+
+    });
+
+  });
 }
 
 
@@ -1342,77 +1298,65 @@ function refreshMemoryPanel() {
 
 function exportMemory() {
 
-  getMemories(
-    function(memories) {
+  getMemories(function(memories) {
 
-      const data = {
+    const data = {
 
-        app:
-          "NEXO",
+      app: "NEXO",
 
-        version:
-          1,
+      version: 1,
 
-        exportedAt:
-          new Date()
-            .toISOString(),
+      exportedAt:
+        new Date().toISOString(),
 
-        memories:
-          memories
-      };
+      memories: memories
+
+    };
 
 
-      const json =
-        JSON.stringify(
-          data,
-          null,
-          2
-        );
-
-
-      const blob =
-        new Blob(
-          [json],
-          {
-            type:
-              "application/json"
-          }
-        );
-
-
-      const url =
-        URL.createObjectURL(
-          blob
-        );
-
-
-      const link =
-        document.createElement(
-          "a"
-        );
-
-
-      link.href =
-        url;
-
-
-      link.download =
-        "NEXO-memoria-" +
-        new Date()
-          .toISOString()
-          .slice(0, 10) +
-        ".json";
-
-
-      link.click();
-
-
-      URL.revokeObjectURL(
-        url
+    const json =
+      JSON.stringify(
+        data,
+        null,
+        2
       );
 
-    }
-  );
+
+    const blob =
+      new Blob(
+        [json],
+        {
+          type:
+            "application/json"
+        }
+      );
+
+
+    const url =
+      URL.createObjectURL(blob);
+
+
+    const link =
+      document.createElement("a");
+
+
+    link.href = url;
+
+
+    link.download =
+      "NEXO-memoria-" +
+      new Date()
+        .toISOString()
+        .slice(0, 10) +
+      ".json";
+
+
+    link.click();
+
+
+    URL.revokeObjectURL(url);
+
+  });
 }
 
 
@@ -1439,9 +1383,7 @@ function importMemory(file) {
 
         if (
           !data.memories ||
-          !Array.isArray(
-            data.memories
-          )
+          !Array.isArray(data.memories)
         ) {
 
           alert(
@@ -1468,17 +1410,23 @@ function importMemory(file) {
         data.memories.forEach(
           function(memory) {
 
-            store.add({
+            if (
+              memory &&
+              typeof memory.content === "string"
+            ) {
 
-              content:
-                memory.content,
+              store.add({
 
-              createdAt:
-                memory.createdAt ||
-                new Date()
-                  .toISOString()
+                content:
+                  memory.content,
 
-            });
+                createdAt:
+                  memory.createdAt ||
+                  new Date().toISOString()
+
+              });
+
+            }
 
           }
         );
@@ -1498,6 +1446,11 @@ function importMemory(file) {
 
       } catch (error) {
 
+        console.error(
+          "Error importando memoria:",
+          error
+        );
+
         alert(
           "No se ha podido leer el archivo."
         );
@@ -1505,9 +1458,7 @@ function importMemory(file) {
     };
 
 
-  reader.readAsText(
-    file
-  );
+  reader.readAsText(file);
 }
 
 
@@ -1525,9 +1476,9 @@ input.addEventListener(
   "keydown",
   function(event) {
 
-    if (
-      event.key === "Enter"
-    ) {
+    if (event.key === "Enter") {
+
+      event.preventDefault();
 
       sendMessage();
     }
@@ -1537,9 +1488,7 @@ input.addEventListener(
 
 
 document
-  .getElementById(
-    "settingsButton"
-  )
+  .getElementById("settingsButton")
   .addEventListener(
     "click",
     openMemoryPanel
@@ -1547,9 +1496,7 @@ document
 
 
 document
-  .getElementById(
-    "closeButton"
-  )
+  .getElementById("closeButton")
   .addEventListener(
     "click",
     function() {
@@ -1563,9 +1510,7 @@ document
 
 
 document
-  .getElementById(
-    "exportButton"
-  )
+  .getElementById("exportButton")
   .addEventListener(
     "click",
     exportMemory
@@ -1573,17 +1518,13 @@ document
 
 
 document
-  .getElementById(
-    "importButton"
-  )
+  .getElementById("importButton")
   .addEventListener(
     "click",
     function() {
 
       document
-        .getElementById(
-          "fileInput"
-        )
+        .getElementById("fileInput")
         .click();
 
     }
@@ -1591,9 +1532,7 @@ document
 
 
 document
-  .getElementById(
-    "fileInput"
-  )
+  .getElementById("fileInput")
   .addEventListener(
     "change",
     function(event) {
@@ -1603,22 +1542,18 @@ document
 
       if (file) {
 
-        importMemory(
-          file
-        );
+        importMemory(file);
+
       }
 
-      event.target.value =
-        "";
+      event.target.value = "";
 
     }
   );
 
 
 document
-  .getElementById(
-    "deleteAllButton"
-  )
+  .getElementById("deleteAllButton")
   .addEventListener(
     "click",
     function() {
