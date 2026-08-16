@@ -342,7 +342,10 @@
     }
 
     .memory-count {
-      margin: 22px 0 10px;
+      margin:
+        22px
+        0
+        10px;
       color: #77777c;
       font-size: 12px;
       text-transform: uppercase;
@@ -484,6 +487,7 @@
 
   </header>
 
+
   <main class="chat" id="chat">
 
     <div class="welcome" id="welcome">
@@ -500,6 +504,7 @@
     </div>
 
   </main>
+
 
   <div class="input-area">
 
@@ -603,7 +608,8 @@ request.onupgradeneeded =
       event.target.result;
 
     if (
-      !database.objectStoreNames.contains("memories")
+      !database.objectStoreNames
+        .contains("memories")
     ) {
 
       const store =
@@ -716,7 +722,7 @@ function getMemories(callback) {
 
 
 /* ==========================================
-   OBTENER MEMORIAS COMO PROMESA
+   NUEVO: OBTENER MEMORIAS COMO PROMESA
    ========================================== */
 
 function getMemoriesAsync() {
@@ -989,8 +995,12 @@ function processMessage(text) {
   /* CONSULTAR */
 
   if (
-    lower.includes("qué recuerdas") ||
-    lower.includes("que recuerdas")
+    lower.includes(
+      "qué recuerdas"
+    ) ||
+    lower.includes(
+      "que recuerdas"
+    )
   ) {
 
     getMemories(
@@ -1108,24 +1118,13 @@ async function askNexo(text) {
 
   try {
 
+    /* OBTENER MEMORIA LOCAL */
+
     const memories =
       await getMemoriesAsync();
 
 
-    console.log(
-      "NEXO → mensaje:",
-      text
-    );
-
-    console.log(
-      "NEXO → memoria:",
-      memories
-    );
-
-
-    /* ======================================
-       PETICIÓN AL WORKER
-       ====================================== */
+    /* ENVIAR MENSAJE + MEMORIA */
 
     const response =
       await fetch(
@@ -1134,76 +1133,36 @@ async function askNexo(text) {
           method: "POST",
 
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type":
+              "application/json"
           },
 
-          body: JSON.stringify({
+          body:
+            JSON.stringify({
 
-            message:
-              text,
+              message:
+                text,
 
-            memory:
-              memories
+              memory:
+                memories
 
-          })
+            })
         }
       );
 
 
-    console.log(
-      "NEXO → status:",
-      response.status
-    );
+    const data =
+      await response.json();
 
-
-    /* ======================================
-       LEER RESPUESTA
-       ====================================== */
-
-    const raw =
-      await response.text();
-
-
-    console.log(
-      "NEXO → respuesta RAW:",
-      raw
-    );
-
-
-    let data;
-
-    try {
-
-      data =
-        JSON.parse(raw);
-
-    } catch (jsonError) {
-
-      throw new Error(
-        "El Worker devolvió una respuesta que no es JSON: " +
-        raw
-      );
-
-    }
-
-
-    /* ======================================
-       COMPROBAR HTTP
-       ====================================== */
 
     if (!response.ok) {
 
       throw new Error(
         data?.error ||
-        "El servidor respondió con HTTP " +
-        response.status
+        "Error del servidor"
       );
     }
 
-
-    /* ======================================
-       RESPUESTA DE NEXO
-       ====================================== */
 
     const answer =
       data?.response;
@@ -1217,9 +1176,7 @@ async function askNexo(text) {
     }
 
 
-    /* ======================================
-       QUITAR PENSANDO
-       ====================================== */
+    /* QUITAR "PENSANDO..." */
 
     const thinkingMessages =
       chat.querySelectorAll(
@@ -1243,14 +1200,11 @@ async function askNexo(text) {
       ) {
 
         lastMessage.remove();
-
       }
     }
 
 
-    /* ======================================
-       MOSTRAR RESPUESTA
-       ====================================== */
+    /* MOSTRAR RESPUESTA */
 
     addMessage(
       answer,
@@ -1261,26 +1215,12 @@ async function askNexo(text) {
   } catch (error) {
 
     console.error(
-      "========== NEXO ERROR =========="
-    );
-
-    console.error(
+      "NEXO connection error:",
       error
     );
 
-    console.error(
-      "Mensaje:",
-      error?.message
-    );
 
-    console.error(
-      "================================"
-    );
-
-
-    /* ======================================
-       QUITAR PENSANDO
-       ====================================== */
+    /* QUITAR "PENSANDO..." */
 
     const thinkingMessages =
       chat.querySelectorAll(
@@ -1304,21 +1244,14 @@ async function askNexo(text) {
       ) {
 
         lastMessage.remove();
-
       }
     }
 
 
-    /* ======================================
-       MOSTRAR ERROR REAL
-       ====================================== */
-
     addMessage(
-      "Error real de NEXO: " +
-      (error?.message || String(error)),
+      "No he podido conectar con mi cerebro ahora mismo.",
       "nexo"
     );
-
   }
 }
 
@@ -1421,7 +1354,8 @@ function exportMemory() {
           1,
 
         exportedAt:
-          new Date().toISOString(),
+          new Date()
+            .toISOString(),
 
         memories:
           memories
@@ -1541,7 +1475,8 @@ function importMemory(file) {
 
               createdAt:
                 memory.createdAt ||
-                new Date().toISOString()
+                new Date()
+                  .toISOString()
 
             });
 
@@ -1560,14 +1495,13 @@ function importMemory(file) {
 
           };
 
+
       } catch (error) {
 
         alert(
           "No se ha podido leer el archivo."
         );
-
       }
-
     };
 
 
@@ -1596,7 +1530,6 @@ input.addEventListener(
     ) {
 
       sendMessage();
-
     }
 
   }
@@ -1604,7 +1537,9 @@ input.addEventListener(
 
 
 document
-  .getElementById("settingsButton")
+  .getElementById(
+    "settingsButton"
+  )
   .addEventListener(
     "click",
     openMemoryPanel
@@ -1612,7 +1547,9 @@ document
 
 
 document
-  .getElementById("closeButton")
+  .getElementById(
+    "closeButton"
+  )
   .addEventListener(
     "click",
     function() {
@@ -1626,7 +1563,9 @@ document
 
 
 document
-  .getElementById("exportButton")
+  .getElementById(
+    "exportButton"
+  )
   .addEventListener(
     "click",
     exportMemory
@@ -1634,13 +1573,17 @@ document
 
 
 document
-  .getElementById("importButton")
+  .getElementById(
+    "importButton"
+  )
   .addEventListener(
     "click",
     function() {
 
       document
-        .getElementById("fileInput")
+        .getElementById(
+          "fileInput"
+        )
         .click();
 
     }
@@ -1648,7 +1591,9 @@ document
 
 
 document
-  .getElementById("fileInput")
+  .getElementById(
+    "fileInput"
+  )
   .addEventListener(
     "change",
     function(event) {
@@ -1661,7 +1606,6 @@ document
         importMemory(
           file
         );
-
       }
 
       event.target.value =
@@ -1672,7 +1616,9 @@ document
 
 
 document
-  .getElementById("deleteAllButton")
+  .getElementById(
+    "deleteAllButton"
+  )
   .addEventListener(
     "click",
     function() {
