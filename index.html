@@ -342,10 +342,7 @@
     }
 
     .memory-count {
-      margin:
-        22px
-        0
-        10px;
+      margin: 22px 0 10px;
       color: #77777c;
       font-size: 12px;
       text-transform: uppercase;
@@ -528,6 +525,7 @@
 
 </div>
 
+
 <!-- MEMORIA -->
 
 <div class="overlay" id="overlay">
@@ -585,64 +583,67 @@
 
 </div>
 
+
 <script>
 
 /* ==========================================
    BASE DE DATOS LOCAL
    ========================================== */
 
-let database = null;
+let database;
 
-const request = indexedDB.open("NEXO_Memory", 1);
+const request =
+  indexedDB.open("NEXO_Memory", 1);
 
-request.onupgradeneeded = function(event) {
 
-  database = event.target.result;
+request.onupgradeneeded =
+  function(event) {
 
-  if (!database.objectStoreNames.contains("memories")) {
+    database =
+      event.target.result;
 
-    const store = database.createObjectStore(
-      "memories",
-      {
-        keyPath: "id",
-        autoIncrement: true
-      }
+    if (
+      !database.objectStoreNames.contains("memories")
+    ) {
+
+      const store =
+        database.createObjectStore(
+          "memories",
+          {
+            keyPath: "id",
+            autoIncrement: true
+          }
+        );
+
+      store.createIndex(
+        "content",
+        "content",
+        {
+          unique: false
+        }
+      );
+
+      store.createIndex(
+        "createdAt",
+        "createdAt",
+        {
+          unique: false
+        }
+      );
+    }
+  };
+
+
+request.onsuccess =
+  function(event) {
+
+    database =
+      event.target.result;
+
+    console.log(
+      "NEXO: memoria local preparada."
     );
-
-    store.createIndex(
-      "content",
-      "content",
-      {
-        unique: false
-      }
-    );
-
-    store.createIndex(
-      "createdAt",
-      "createdAt",
-      {
-        unique: false
-      }
-    );
-  }
-};
-
-request.onsuccess = function(event) {
-
-  database = event.target.result;
-
-  console.log(
-    "NEXO: memoria local preparada."
-  );
-};
-
-request.onerror = function(event) {
-
-  console.error(
-    "NEXO: error IndexedDB:",
-    event.target.error
-  );
-};
+  };
 
 
 /* ==========================================
@@ -653,37 +654,27 @@ function saveMemory(content) {
 
   if (!database) return false;
 
-  try {
-
-    const transaction = database.transaction(
+  const transaction =
+    database.transaction(
       ["memories"],
       "readwrite"
     );
 
-    const store = transaction.objectStore(
+  const store =
+    transaction.objectStore(
       "memories"
     );
 
-    store.add({
+  store.add({
 
-      content: content,
+    content:
+      content,
 
-      createdAt:
-        new Date().toISOString()
+    createdAt:
+      new Date().toISOString()
+  });
 
-    });
-
-    return true;
-
-  } catch (error) {
-
-    console.error(
-      "Error guardando memoria:",
-      error
-    );
-
-    return false;
-  }
+  return true;
 }
 
 
@@ -700,33 +691,27 @@ function getMemories(callback) {
     return;
   }
 
-  const transaction = database.transaction(
-    ["memories"],
-    "readonly"
-  );
-
-  const store = transaction.objectStore(
-    "memories"
-  );
-
-  const request = store.getAll();
-
-  request.onsuccess = function() {
-
-    callback(
-      request.result || []
-    );
-  };
-
-  request.onerror = function() {
-
-    console.error(
-      "Error obteniendo memorias:",
-      request.error
+  const transaction =
+    database.transaction(
+      ["memories"],
+      "readonly"
     );
 
-    callback([]);
-  };
+  const store =
+    transaction.objectStore(
+      "memories"
+    );
+
+  const request =
+    store.getAll();
+
+  request.onsuccess =
+    function() {
+
+      callback(
+        request.result
+      );
+    };
 }
 
 
@@ -736,15 +721,19 @@ function getMemories(callback) {
 
 function getMemoriesAsync() {
 
-  return new Promise(function(resolve) {
+  return new Promise(
+    function(resolve) {
 
-    getMemories(function(memories) {
+      getMemories(
+        function(memories) {
 
-      resolve(memories);
+          resolve(memories);
 
-    });
+        }
+      );
 
-  });
+    }
+  );
 }
 
 
@@ -757,49 +746,53 @@ function deleteMemories(
   callback
 ) {
 
-  if (!database) {
+  getMemories(
+    function(memories) {
 
-    callback(0);
+      const transaction =
+        database.transaction(
+          ["memories"],
+          "readwrite"
+        );
 
-    return;
-  }
+      const store =
+        transaction.objectStore(
+          "memories"
+        );
 
-  getMemories(function(memories) {
+      let deleted = 0;
 
-    const transaction = database.transaction(
-      ["memories"],
-      "readwrite"
-    );
+      const search =
+        searchText.toLowerCase();
 
-    const store = transaction.objectStore(
-      "memories"
-    );
+      memories.forEach(
+        function(memory) {
 
-    let deleted = 0;
+          if (
+            memory.content
+              .toLowerCase()
+              .includes(search)
+          ) {
 
-    const search =
-      searchText.toLowerCase();
+            store.delete(
+              memory.id
+            );
 
-    memories.forEach(function(memory) {
+            deleted++;
+          }
+        }
+      );
 
-      if (
-        memory.content &&
-        memory.content.toLowerCase().includes(search)
-      ) {
+      transaction.oncomplete =
+        function() {
 
-        store.delete(memory.id);
+          callback(
+            deleted
+          );
 
-        deleted++;
-      }
-    });
-
-    transaction.oncomplete = function() {
-
-      callback(deleted);
-
-    };
-
-  });
+        };
+    }
+  );
 }
 
 
@@ -807,31 +800,30 @@ function deleteMemories(
    BORRAR TODO
    ========================================== */
 
-function deleteAllMemories(callback) {
+function deleteAllMemories(
+  callback
+) {
 
-  if (!database) {
+  const transaction =
+    database.transaction(
+      ["memories"],
+      "readwrite"
+    );
 
-    callback();
+  const store =
+    transaction.objectStore(
+      "memories"
+    );
 
-    return;
-  }
+  const request =
+    store.clear();
 
-  const transaction = database.transaction(
-    ["memories"],
-    "readwrite"
-  );
+  request.onsuccess =
+    function() {
 
-  const store = transaction.objectStore(
-    "memories"
-  );
+      callback();
 
-  const request = store.clear();
-
-  request.onsuccess = function() {
-
-    callback();
-
-  };
+    };
 }
 
 
@@ -840,40 +832,60 @@ function deleteAllMemories(callback) {
    ========================================== */
 
 const input =
-  document.getElementById("messageInput");
+  document.getElementById(
+    "messageInput"
+  );
 
 const sendButton =
-  document.getElementById("sendButton");
+  document.getElementById(
+    "sendButton"
+  );
 
 const chat =
-  document.getElementById("chat");
+  document.getElementById(
+    "chat"
+  );
 
 const welcome =
-  document.getElementById("welcome");
+  document.getElementById(
+    "welcome"
+  );
 
 const overlay =
-  document.getElementById("overlay");
+  document.getElementById(
+    "overlay"
+  );
 
 const memoryList =
-  document.getElementById("memoryList");
+  document.getElementById(
+    "memoryList"
+  );
 
 const memoryCount =
-  document.getElementById("memoryCount");
+  document.getElementById(
+    "memoryCount"
+  );
 
 
 /* ==========================================
    MENSAJES
    ========================================== */
 
-function addMessage(text, type) {
+function addMessage(
+  text,
+  type
+) {
 
   if (welcome) {
 
-    welcome.style.display = "none";
+    welcome.style.display =
+      "none";
   }
 
   const message =
-    document.createElement("div");
+    document.createElement(
+      "div"
+    );
 
   message.className =
     "message " + type;
@@ -881,7 +893,9 @@ function addMessage(text, type) {
   message.textContent =
     text;
 
-  chat.appendChild(message);
+  chat.appendChild(
+    message
+  );
 
   chat.scrollTop =
     chat.scrollHeight;
@@ -906,7 +920,9 @@ function sendMessage() {
 
   input.value = "";
 
-  processMessage(text);
+  processMessage(
+    text
+  );
 }
 
 
@@ -930,14 +946,27 @@ function processMessage(text) {
 
     let memory =
       text
-        .replace(/^nexo,\s*/i, "")
-        .replace(/^recuerda que\s+/i, "")
-        .replace(/^recuerda\s+/i, "")
+        .replace(
+          /^nexo,\s*/i,
+          ""
+        )
+        .replace(
+          /^recuerda que\s+/i,
+          ""
+        )
+        .replace(
+          /^recuerda\s+/i,
+          ""
+        )
         .trim();
 
     if (memory.length > 0) {
 
-      if (saveMemory(memory)) {
+      if (
+        saveMemory(
+          memory
+        )
+      ) {
 
         addMessage(
           "Lo recordaré. 🧠",
@@ -964,35 +993,41 @@ function processMessage(text) {
     lower.includes("que recuerdas")
   ) {
 
-    getMemories(function(memories) {
+    getMemories(
+      function(memories) {
 
-      if (memories.length === 0) {
+        if (
+          memories.length === 0
+        ) {
+
+          addMessage(
+            "Todavía no tengo ningún recuerdo guardado.",
+            "nexo"
+          );
+
+          return;
+        }
+
+        let response =
+          "Esto es lo que recuerdo:\n\n";
+
+        memories.forEach(
+          function(memory) {
+
+            response +=
+              "• " +
+              memory.content +
+              "\n";
+          }
+        );
 
         addMessage(
-          "Todavía no tengo ningún recuerdo guardado.",
+          response,
           "nexo"
         );
 
-        return;
       }
-
-      let response =
-        "Esto es lo que recuerdo:\n\n";
-
-      memories.forEach(function(memory) {
-
-        response +=
-          "• " +
-          memory.content +
-          "\n";
-      });
-
-      addMessage(
-        response,
-        "nexo"
-      );
-
-    });
+    );
 
     return;
   }
@@ -1008,16 +1043,27 @@ function processMessage(text) {
 
     let search =
       text
-        .replace(/^nexo,\s*/i, "")
-        .replace(/^olvida que\s+/i, "")
-        .replace(/^olvida\s+/i, "")
+        .replace(
+          /^nexo,\s*/i,
+          ""
+        )
+        .replace(
+          /^olvida que\s+/i,
+          ""
+        )
+        .replace(
+          /^olvida\s+/i,
+          ""
+        )
         .trim();
 
     deleteMemories(
       search,
       function(deleted) {
 
-        if (deleted > 0) {
+        if (
+          deleted > 0
+        ) {
 
           addMessage(
             "He eliminado " +
@@ -1043,7 +1089,9 @@ function processMessage(text) {
 
   /* ENVIAR A GEMINI */
 
-  askNexo(text);
+  askNexo(
+    text
+  );
 }
 
 
@@ -1060,22 +1108,24 @@ async function askNexo(text) {
 
   try {
 
-    /* OBTENER MEMORIA LOCAL */
-
     const memories =
       await getMemoriesAsync();
 
 
     console.log(
-      "NEXO → enviando:",
-      {
-        message: text,
-        memory: memories
-      }
+      "NEXO → mensaje:",
+      text
+    );
+
+    console.log(
+      "NEXO → memoria:",
+      memories
     );
 
 
-    /* ENVIAR MENSAJE + MEMORIA AL WORKER */
+    /* ======================================
+       PETICIÓN AL WORKER
+       ====================================== */
 
     const response =
       await fetch(
@@ -1089,24 +1139,34 @@ async function askNexo(text) {
 
           body: JSON.stringify({
 
-            message: text,
+            message:
+              text,
 
-            memory: memories
+            memory:
+              memories
 
           })
         }
       );
 
 
-    /* LEER RESPUESTA */
+    console.log(
+      "NEXO → status:",
+      response.status
+    );
 
-    const rawText =
+
+    /* ======================================
+       LEER RESPUESTA
+       ====================================== */
+
+    const raw =
       await response.text();
 
+
     console.log(
-      "NEXO ← respuesta:",
-      response.status,
-      rawText
+      "NEXO → respuesta RAW:",
+      raw
     );
 
 
@@ -1115,30 +1175,35 @@ async function askNexo(text) {
     try {
 
       data =
-        JSON.parse(rawText);
+        JSON.parse(raw);
 
-    } catch (parseError) {
+    } catch (jsonError) {
 
       throw new Error(
-        "El Worker devolvió una respuesta que no es JSON válido: " +
-        rawText
+        "El Worker devolvió una respuesta que no es JSON: " +
+        raw
       );
+
     }
 
 
-    /* COMPROBAR HTTP */
+    /* ======================================
+       COMPROBAR HTTP
+       ====================================== */
 
     if (!response.ok) {
 
       throw new Error(
         data?.error ||
-        "Error del servidor. HTTP " +
+        "El servidor respondió con HTTP " +
         response.status
       );
     }
 
 
-    /* COMPROBAR RESPUESTA */
+    /* ======================================
+       RESPUESTA DE NEXO
+       ====================================== */
 
     const answer =
       data?.response;
@@ -1152,13 +1217,19 @@ async function askNexo(text) {
     }
 
 
-    /* QUITAR PENSANDO */
+    /* ======================================
+       QUITAR PENSANDO
+       ====================================== */
 
     const thinkingMessages =
-      chat.querySelectorAll(".nexo");
+      chat.querySelectorAll(
+        ".nexo"
+      );
 
 
-    if (thinkingMessages.length > 0) {
+    if (
+      thinkingMessages.length > 0
+    ) {
 
       const lastMessage =
         thinkingMessages[
@@ -1172,11 +1243,14 @@ async function askNexo(text) {
       ) {
 
         lastMessage.remove();
+
       }
     }
 
 
-    /* MOSTRAR RESPUESTA */
+    /* ======================================
+       MOSTRAR RESPUESTA
+       ====================================== */
 
     addMessage(
       answer,
@@ -1187,18 +1261,36 @@ async function askNexo(text) {
   } catch (error) {
 
     console.error(
-      "NEXO connection error:",
+      "========== NEXO ERROR =========="
+    );
+
+    console.error(
       error
     );
 
+    console.error(
+      "Mensaje:",
+      error?.message
+    );
 
-    /* QUITAR PENSANDO */
+    console.error(
+      "================================"
+    );
+
+
+    /* ======================================
+       QUITAR PENSANDO
+       ====================================== */
 
     const thinkingMessages =
-      chat.querySelectorAll(".nexo");
+      chat.querySelectorAll(
+        ".nexo"
+      );
 
 
-    if (thinkingMessages.length > 0) {
+    if (
+      thinkingMessages.length > 0
+    ) {
 
       const lastMessage =
         thinkingMessages[
@@ -1212,17 +1304,21 @@ async function askNexo(text) {
       ) {
 
         lastMessage.remove();
+
       }
     }
 
 
-    /* MOSTRAR ERROR REAL */
+    /* ======================================
+       MOSTRAR ERROR REAL
+       ====================================== */
 
     addMessage(
-      "Error real de NEXO:\n" +
-      error.message,
+      "Error real de NEXO: " +
+      (error?.message || String(error)),
       "nexo"
     );
+
   }
 }
 
@@ -1243,52 +1339,67 @@ function openMemoryPanel() {
 
 function refreshMemoryPanel() {
 
-  getMemories(function(memories) {
+  getMemories(
+    function(memories) {
 
-    memoryCount.textContent =
-      memories.length +
-      (
-        memories.length === 1
-          ? " recuerdo"
-          : " recuerdos"
+      memoryCount.textContent =
+        memories.length +
+        (
+          memories.length === 1
+            ? " recuerdo"
+            : " recuerdos"
+        );
+
+      memoryList.innerHTML =
+        "";
+
+
+      if (
+        memories.length === 0
+      ) {
+
+        const empty =
+          document.createElement(
+            "div"
+          );
+
+        empty.className =
+          "memory-item";
+
+        empty.textContent =
+          "No tienes recuerdos guardados.";
+
+        memoryList.appendChild(
+          empty
+        );
+
+        return;
+      }
+
+
+      memories.forEach(
+        function(memory) {
+
+          const item =
+            document.createElement(
+              "div"
+            );
+
+          item.className =
+            "memory-item";
+
+          item.textContent =
+            memory.content;
+
+          memoryList.appendChild(
+            item
+          );
+
+        }
       );
 
-    memoryList.innerHTML = "";
-
-
-    if (memories.length === 0) {
-
-      const empty =
-        document.createElement("div");
-
-      empty.className =
-        "memory-item";
-
-      empty.textContent =
-        "No tienes recuerdos guardados.";
-
-      memoryList.appendChild(empty);
-
-      return;
     }
-
-
-    memories.forEach(function(memory) {
-
-      const item =
-        document.createElement("div");
-
-      item.className =
-        "memory-item";
-
-      item.textContent =
-        memory.content;
-
-      memoryList.appendChild(item);
-
-    });
-
-  });
+  );
 }
 
 
@@ -1298,65 +1409,76 @@ function refreshMemoryPanel() {
 
 function exportMemory() {
 
-  getMemories(function(memories) {
+  getMemories(
+    function(memories) {
 
-    const data = {
+      const data = {
 
-      app: "NEXO",
+        app:
+          "NEXO",
 
-      version: 1,
+        version:
+          1,
 
-      exportedAt:
-        new Date().toISOString(),
+        exportedAt:
+          new Date().toISOString(),
 
-      memories: memories
+        memories:
+          memories
+      };
 
-    };
+
+      const json =
+        JSON.stringify(
+          data,
+          null,
+          2
+        );
 
 
-    const json =
-      JSON.stringify(
-        data,
-        null,
-        2
+      const blob =
+        new Blob(
+          [json],
+          {
+            type:
+              "application/json"
+          }
+        );
+
+
+      const url =
+        URL.createObjectURL(
+          blob
+        );
+
+
+      const link =
+        document.createElement(
+          "a"
+        );
+
+
+      link.href =
+        url;
+
+
+      link.download =
+        "NEXO-memoria-" +
+        new Date()
+          .toISOString()
+          .slice(0, 10) +
+        ".json";
+
+
+      link.click();
+
+
+      URL.revokeObjectURL(
+        url
       );
 
-
-    const blob =
-      new Blob(
-        [json],
-        {
-          type:
-            "application/json"
-        }
-      );
-
-
-    const url =
-      URL.createObjectURL(blob);
-
-
-    const link =
-      document.createElement("a");
-
-
-    link.href = url;
-
-
-    link.download =
-      "NEXO-memoria-" +
-      new Date()
-        .toISOString()
-        .slice(0, 10) +
-      ".json";
-
-
-    link.click();
-
-
-    URL.revokeObjectURL(url);
-
-  });
+    }
+  );
 }
 
 
@@ -1383,7 +1505,9 @@ function importMemory(file) {
 
         if (
           !data.memories ||
-          !Array.isArray(data.memories)
+          !Array.isArray(
+            data.memories
+          )
         ) {
 
           alert(
@@ -1410,23 +1534,16 @@ function importMemory(file) {
         data.memories.forEach(
           function(memory) {
 
-            if (
-              memory &&
-              typeof memory.content === "string"
-            ) {
+            store.add({
 
-              store.add({
+              content:
+                memory.content,
 
-                content:
-                  memory.content,
+              createdAt:
+                memory.createdAt ||
+                new Date().toISOString()
 
-                createdAt:
-                  memory.createdAt ||
-                  new Date().toISOString()
-
-              });
-
-            }
+            });
 
           }
         );
@@ -1443,22 +1560,20 @@ function importMemory(file) {
 
           };
 
-
       } catch (error) {
-
-        console.error(
-          "Error importando memoria:",
-          error
-        );
 
         alert(
           "No se ha podido leer el archivo."
         );
+
       }
+
     };
 
 
-  reader.readAsText(file);
+  reader.readAsText(
+    file
+  );
 }
 
 
@@ -1476,11 +1591,12 @@ input.addEventListener(
   "keydown",
   function(event) {
 
-    if (event.key === "Enter") {
-
-      event.preventDefault();
+    if (
+      event.key === "Enter"
+    ) {
 
       sendMessage();
+
     }
 
   }
@@ -1542,11 +1658,14 @@ document
 
       if (file) {
 
-        importMemory(file);
+        importMemory(
+          file
+        );
 
       }
 
-      event.target.value = "";
+      event.target.value =
+        "";
 
     }
   );
