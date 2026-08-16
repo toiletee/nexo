@@ -71,10 +71,6 @@
         #000;
     }
 
-    /* =========================
-       HEADER
-       ========================= */
-
     header {
       position: relative;
       flex-shrink: 0;
@@ -137,10 +133,6 @@
       transform: scale(.92);
       color: #fff;
     }
-
-    /* =========================
-       CHAT
-       ========================= */
 
     .chat {
       flex: 1;
@@ -230,10 +222,6 @@
       border: 1px solid var(--border);
     }
 
-    /* =========================
-       INPUT
-       ========================= */
-
     .input-area {
       flex-shrink: 0;
       padding:
@@ -299,10 +287,6 @@
     .send-button:active {
       transform: scale(.9);
     }
-
-    /* =========================
-       MEMORY PANEL
-       ========================= */
 
     .overlay {
       position: fixed;
@@ -421,10 +405,6 @@
       display: none;
     }
 
-    /* =========================
-       ANIMACIONES
-       ========================= */
-
     @keyframes breathe {
       0%, 100% {
         transform: scale(1);
@@ -488,12 +468,15 @@
 <div class="app">
 
   <header>
+
     <div class="brand">
       <div class="brand-dot"></div>
       <div class="logo">NEXO</div>
     </div>
 
-    <div class="status">Tu asistente personal</div>
+    <div class="status">
+      Tu asistente personal
+    </div>
 
     <button
       class="settings-button"
@@ -501,7 +484,9 @@
       aria-label="Memoria">
       ⚙︎
     </button>
+
   </header>
+
 
   <main class="chat" id="chat">
 
@@ -519,6 +504,7 @@
     </div>
 
   </main>
+
 
   <div class="input-area">
 
@@ -563,13 +549,20 @@
       Cargando...
     </div>
 
-    <div class="memory-list" id="memoryList"></div>
+    <div
+      class="memory-list"
+      id="memoryList">
+    </div>
 
-    <button class="action primary" id="exportButton">
+    <button
+      class="action primary"
+      id="exportButton">
       ↑&nbsp; Exportar memoria
     </button>
 
-    <button class="action" id="importButton">
+    <button
+      class="action"
+      id="importButton">
       ↓&nbsp; Importar memoria
     </button>
 
@@ -579,11 +572,15 @@
       type="file"
       accept=".json,application/json">
 
-    <button class="action danger" id="deleteAllButton">
+    <button
+      class="action danger"
+      id="deleteAllButton">
       Borrar toda la memoria
     </button>
 
-    <button class="action close" id="closeButton">
+    <button
+      class="action close"
+      id="closeButton">
       Cerrar
     </button>
 
@@ -594,133 +591,866 @@
 
 <script>
 
-  /* ==========================================
-     BASE DE DATOS LOCAL
-     ========================================== */
+/* ==========================================
+   BASE DE DATOS LOCAL
+   ========================================== */
 
-  let database;
+let database;
 
-  const request =
-    indexedDB.open("NEXO_Memory", 1);
+const request =
+  indexedDB.open("NEXO_Memory", 1);
 
-  request.onupgradeneeded =
-    function(event) {
 
-      database =
-        event.target.result;
+request.onupgradeneeded =
+  function(event) {
 
-      if (
-        !database.objectStoreNames
-          .contains("memories")
-      ) {
+    database =
+      event.target.result;
 
-        const store =
-          database.createObjectStore(
-            "memories",
-            {
-              keyPath: "id",
-              autoIncrement: true
-            }
-          );
+    if (
+      !database.objectStoreNames
+        .contains("memories")
+    ) {
 
-        store.createIndex(
-          "content",
-          "content",
-          { unique: false }
+      const store =
+        database.createObjectStore(
+          "memories",
+          {
+            keyPath: "id",
+            autoIncrement: true
+          }
         );
 
-        store.createIndex(
-          "createdAt",
-          "createdAt",
-          { unique: false }
-        );
-      }
-    };
-
-
-  request.onsuccess =
-    function(event) {
-
-      database =
-        event.target.result;
-
-      console.log(
-        "NEXO: memoria local preparada."
-      );
-    };
-
-
-  /* ==========================================
-     GUARDAR MEMORIA
-     ========================================== */
-
-  function saveMemory(content) {
-
-    if (!database) return false;
-
-    const transaction =
-      database.transaction(
-        ["memories"],
-        "readwrite"
+      store.createIndex(
+        "content",
+        "content",
+        {
+          unique: false
+        }
       );
 
-    const store =
-      transaction.objectStore("memories");
+      store.createIndex(
+        "createdAt",
+        "createdAt",
+        {
+          unique: false
+        }
+      );
+    }
+  };
 
-    store.add({
-      content: content,
-      createdAt:
-        new Date().toISOString()
-    });
 
-    return true;
+request.onsuccess =
+  function(event) {
+
+    database =
+      event.target.result;
+
+    console.log(
+      "NEXO: memoria local preparada."
+    );
+  };
+
+
+/* ==========================================
+   GUARDAR MEMORIA
+   ========================================== */
+
+function saveMemory(content) {
+
+  if (!database) return false;
+
+  const transaction =
+    database.transaction(
+      ["memories"],
+      "readwrite"
+    );
+
+  const store =
+    transaction.objectStore(
+      "memories"
+    );
+
+  store.add({
+
+    content:
+      content,
+
+    createdAt:
+      new Date().toISOString()
+  });
+
+  return true;
+}
+
+
+/* ==========================================
+   OBTENER MEMORIAS
+   ========================================== */
+
+function getMemories(callback) {
+
+  if (!database) {
+
+    callback([]);
+
+    return;
   }
 
+  const transaction =
+    database.transaction(
+      ["memories"],
+      "readonly"
+    );
 
-  /* ==========================================
-     OBTENER MEMORIAS
-     ========================================== */
+  const store =
+    transaction.objectStore(
+      "memories"
+    );
 
-  function getMemories(callback) {
+  const request =
+    store.getAll();
 
-    if (!database) {
+  request.onsuccess =
+    function() {
 
-      callback([]);
+      callback(
+        request.result
+      );
+    };
+}
+
+
+/* ==========================================
+   NUEVO: OBTENER MEMORIAS COMO PROMESA
+   ========================================== */
+
+function getMemoriesAsync() {
+
+  return new Promise(
+    function(resolve) {
+
+      getMemories(
+        function(memories) {
+
+          resolve(memories);
+
+        }
+      );
+
+    }
+  );
+}
+
+
+/* ==========================================
+   BORRAR MEMORIA
+   ========================================== */
+
+function deleteMemories(
+  searchText,
+  callback
+) {
+
+  getMemories(
+    function(memories) {
+
+      const transaction =
+        database.transaction(
+          ["memories"],
+          "readwrite"
+        );
+
+      const store =
+        transaction.objectStore(
+          "memories"
+        );
+
+      let deleted = 0;
+
+      const search =
+        searchText.toLowerCase();
+
+      memories.forEach(
+        function(memory) {
+
+          if (
+            memory.content
+              .toLowerCase()
+              .includes(search)
+          ) {
+
+            store.delete(
+              memory.id
+            );
+
+            deleted++;
+          }
+        }
+      );
+
+      transaction.oncomplete =
+        function() {
+
+          callback(
+            deleted
+          );
+
+        };
+    }
+  );
+}
+
+
+/* ==========================================
+   BORRAR TODO
+   ========================================== */
+
+function deleteAllMemories(
+  callback
+) {
+
+  const transaction =
+    database.transaction(
+      ["memories"],
+      "readwrite"
+    );
+
+  const store =
+    transaction.objectStore(
+      "memories"
+    );
+
+  const request =
+    store.clear();
+
+  request.onsuccess =
+    function() {
+
+      callback();
+
+    };
+}
+
+
+/* ==========================================
+   ELEMENTOS
+   ========================================== */
+
+const input =
+  document.getElementById(
+    "messageInput"
+  );
+
+const sendButton =
+  document.getElementById(
+    "sendButton"
+  );
+
+const chat =
+  document.getElementById(
+    "chat"
+  );
+
+const welcome =
+  document.getElementById(
+    "welcome"
+  );
+
+const overlay =
+  document.getElementById(
+    "overlay"
+  );
+
+const memoryList =
+  document.getElementById(
+    "memoryList"
+  );
+
+const memoryCount =
+  document.getElementById(
+    "memoryCount"
+  );
+
+
+/* ==========================================
+   MENSAJES
+   ========================================== */
+
+function addMessage(
+  text,
+  type
+) {
+
+  if (welcome) {
+
+    welcome.style.display =
+      "none";
+  }
+
+  const message =
+    document.createElement(
+      "div"
+    );
+
+  message.className =
+    "message " + type;
+
+  message.textContent =
+    text;
+
+  chat.appendChild(
+    message
+  );
+
+  chat.scrollTop =
+    chat.scrollHeight;
+}
+
+
+/* ==========================================
+   ENVIAR
+   ========================================== */
+
+function sendMessage() {
+
+  const text =
+    input.value.trim();
+
+  if (!text) return;
+
+  addMessage(
+    text,
+    "user"
+  );
+
+  input.value = "";
+
+  processMessage(
+    text
+  );
+}
+
+
+/* ==========================================
+   PROCESADOR
+   ========================================== */
+
+function processMessage(text) {
+
+  const lower =
+    text.toLowerCase();
+
+
+  /* RECORDAR */
+
+  if (
+    lower.startsWith("recuerda ") ||
+    lower.startsWith("recuerda que ") ||
+    lower.startsWith("nexo, recuerda ")
+  ) {
+
+    let memory =
+      text
+        .replace(
+          /^nexo,\s*/i,
+          ""
+        )
+        .replace(
+          /^recuerda que\s+/i,
+          ""
+        )
+        .replace(
+          /^recuerda\s+/i,
+          ""
+        )
+        .trim();
+
+    if (memory.length > 0) {
+
+      if (
+        saveMemory(
+          memory
+        )
+      ) {
+
+        addMessage(
+          "Lo recordaré. 🧠",
+          "nexo"
+        );
+
+      } else {
+
+        addMessage(
+          "No he podido guardar ese recuerdo.",
+          "nexo"
+        );
+      }
 
       return;
     }
-
-    const transaction =
-      database.transaction(
-        ["memories"],
-        "readonly"
-      );
-
-    const store =
-      transaction.objectStore("memories");
-
-    const request =
-      store.getAll();
-
-    request.onsuccess =
-      function() {
-
-        callback(request.result);
-      };
   }
 
 
-  /* ==========================================
-     BORRAR MEMORIA
-     ========================================== */
+  /* CONSULTAR */
 
-  function deleteMemories(
-    searchText,
-    callback
+  if (
+    lower.includes(
+      "qué recuerdas"
+    ) ||
+    lower.includes(
+      "que recuerdas"
+    )
   ) {
 
     getMemories(
       function(memories) {
+
+        if (
+          memories.length === 0
+        ) {
+
+          addMessage(
+            "Todavía no tengo ningún recuerdo guardado.",
+            "nexo"
+          );
+
+          return;
+        }
+
+        let response =
+          "Esto es lo que recuerdo:\n\n";
+
+        memories.forEach(
+          function(memory) {
+
+            response +=
+              "• " +
+              memory.content +
+              "\n";
+          }
+        );
+
+        addMessage(
+          response,
+          "nexo"
+        );
+
+      }
+    );
+
+    return;
+  }
+
+
+  /* OLVIDAR */
+
+  if (
+    lower.startsWith("olvida ") ||
+    lower.startsWith("olvida que ") ||
+    lower.startsWith("nexo, olvida ")
+  ) {
+
+    let search =
+      text
+        .replace(
+          /^nexo,\s*/i,
+          ""
+        )
+        .replace(
+          /^olvida que\s+/i,
+          ""
+        )
+        .replace(
+          /^olvida\s+/i,
+          ""
+        )
+        .trim();
+
+    deleteMemories(
+      search,
+      function(deleted) {
+
+        if (
+          deleted > 0
+        ) {
+
+          addMessage(
+            "He eliminado " +
+            deleted +
+            " recuerdo(s). 🗑️",
+            "nexo"
+          );
+
+        } else {
+
+          addMessage(
+            "No he encontrado ese recuerdo.",
+            "nexo"
+          );
+        }
+
+      }
+    );
+
+    return;
+  }
+
+
+  /* ENVIAR A GEMINI */
+
+  askNexo(
+    text
+  );
+}
+
+
+/* ==========================================
+   CONEXIÓN CON NEXO / CLOUDFLARE
+   ========================================== */
+
+async function askNexo(text) {
+
+  addMessage(
+    "NEXO está pensando…",
+    "nexo"
+  );
+
+  try {
+
+    /* OBTENER MEMORIA LOCAL */
+
+    const memories =
+      await getMemoriesAsync();
+
+
+    /* ENVIAR MENSAJE + MEMORIA */
+
+    const response =
+      await fetch(
+        "https://nexo-api.electricalmen2003.workers.dev/",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body:
+            JSON.stringify({
+
+              message:
+                text,
+
+              memory:
+                memories
+
+            })
+        }
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        data?.error ||
+        "Error del servidor"
+      );
+    }
+
+
+    const answer =
+      data?.response;
+
+
+    if (!answer) {
+
+      throw new Error(
+        "NEXO no devolvió ninguna respuesta."
+      );
+    }
+
+
+    /* QUITAR "PENSANDO..." */
+
+    const thinkingMessages =
+      chat.querySelectorAll(
+        ".nexo"
+      );
+
+
+    if (
+      thinkingMessages.length > 0
+    ) {
+
+      const lastMessage =
+        thinkingMessages[
+          thinkingMessages.length - 1
+        ];
+
+
+      if (
+        lastMessage.textContent ===
+        "NEXO está pensando…"
+      ) {
+
+        lastMessage.remove();
+      }
+    }
+
+
+    /* MOSTRAR RESPUESTA */
+
+    addMessage(
+      answer,
+      "nexo"
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "NEXO connection error:",
+      error
+    );
+
+
+    /* QUITAR "PENSANDO..." */
+
+    const thinkingMessages =
+      chat.querySelectorAll(
+        ".nexo"
+      );
+
+
+    if (
+      thinkingMessages.length > 0
+    ) {
+
+      const lastMessage =
+        thinkingMessages[
+          thinkingMessages.length - 1
+        ];
+
+
+      if (
+        lastMessage.textContent ===
+        "NEXO está pensando…"
+      ) {
+
+        lastMessage.remove();
+      }
+    }
+
+
+    addMessage(
+      "No he podido conectar con mi cerebro ahora mismo.",
+      "nexo"
+    );
+  }
+}
+
+
+/* ==========================================
+   PANEL DE MEMORIA
+   ========================================== */
+
+function openMemoryPanel() {
+
+  overlay.classList.add(
+    "visible"
+  );
+
+  refreshMemoryPanel();
+}
+
+
+function refreshMemoryPanel() {
+
+  getMemories(
+    function(memories) {
+
+      memoryCount.textContent =
+        memories.length +
+        (
+          memories.length === 1
+            ? " recuerdo"
+            : " recuerdos"
+        );
+
+      memoryList.innerHTML =
+        "";
+
+
+      if (
+        memories.length === 0
+      ) {
+
+        const empty =
+          document.createElement(
+            "div"
+          );
+
+        empty.className =
+          "memory-item";
+
+        empty.textContent =
+          "No tienes recuerdos guardados.";
+
+        memoryList.appendChild(
+          empty
+        );
+
+        return;
+      }
+
+
+      memories.forEach(
+        function(memory) {
+
+          const item =
+            document.createElement(
+              "div"
+            );
+
+          item.className =
+            "memory-item";
+
+          item.textContent =
+            memory.content;
+
+          memoryList.appendChild(
+            item
+          );
+
+        }
+      );
+
+    }
+  );
+}
+
+
+/* ==========================================
+   EXPORTAR
+   ========================================== */
+
+function exportMemory() {
+
+  getMemories(
+    function(memories) {
+
+      const data = {
+
+        app:
+          "NEXO",
+
+        version:
+          1,
+
+        exportedAt:
+          new Date()
+            .toISOString(),
+
+        memories:
+          memories
+      };
+
+
+      const json =
+        JSON.stringify(
+          data,
+          null,
+          2
+        );
+
+
+      const blob =
+        new Blob(
+          [json],
+          {
+            type:
+              "application/json"
+          }
+        );
+
+
+      const url =
+        URL.createObjectURL(
+          blob
+        );
+
+
+      const link =
+        document.createElement(
+          "a"
+        );
+
+
+      link.href =
+        url;
+
+
+      link.download =
+        "NEXO-memoria-" +
+        new Date()
+          .toISOString()
+          .slice(0, 10) +
+        ".json";
+
+
+      link.click();
+
+
+      URL.revokeObjectURL(
+        url
+      );
+
+    }
+  );
+}
+
+
+/* ==========================================
+   IMPORTAR
+   ========================================== */
+
+function importMemory(file) {
+
+  const reader =
+    new FileReader();
+
+
+  reader.onload =
+    function(event) {
+
+      try {
+
+        const data =
+          JSON.parse(
+            event.target.result
+          );
+
+
+        if (
+          !data.memories ||
+          !Array.isArray(
+            data.memories
+          )
+        ) {
+
+          alert(
+            "Este archivo no parece una memoria de NEXO válida."
+          );
+
+          return;
+        }
+
 
         const transaction =
           database.transaction(
@@ -728,792 +1458,192 @@
             "readwrite"
           );
 
+
         const store =
           transaction.objectStore(
             "memories"
           );
 
-        let deleted = 0;
 
-        const search =
-          searchText.toLowerCase();
-
-        memories.forEach(
+        data.memories.forEach(
           function(memory) {
 
-            if (
-              memory.content
-                .toLowerCase()
-                .includes(search)
-            ) {
+            store.add({
 
-              store.delete(memory.id);
+              content:
+                memory.content,
 
-              deleted++;
-            }
+              createdAt:
+                memory.createdAt ||
+                new Date()
+                  .toISOString()
+
+            });
+
           }
         );
+
 
         transaction.oncomplete =
           function() {
 
-            callback(deleted);
-          };
-      }
-    );
-  }
-
-
-  /* ==========================================
-     BORRAR TODO
-     ========================================== */
-
-  function deleteAllMemories(
-    callback
-  ) {
-
-    const transaction =
-      database.transaction(
-        ["memories"],
-        "readwrite"
-      );
-
-    const store =
-      transaction.objectStore(
-        "memories"
-      );
-
-    const request =
-      store.clear();
-
-    request.onsuccess =
-      function() {
-
-        callback();
-      };
-  }
-
-
-  /* ==========================================
-     ELEMENTOS
-     ========================================== */
-
-  const input =
-    document.getElementById(
-      "messageInput"
-    );
-
-  const sendButton =
-    document.getElementById(
-      "sendButton"
-    );
-
-  const chat =
-    document.getElementById(
-      "chat"
-    );
-
-  const welcome =
-    document.getElementById(
-      "welcome"
-    );
-
-  const overlay =
-    document.getElementById(
-      "overlay"
-    );
-
-  const memoryList =
-    document.getElementById(
-      "memoryList"
-    );
-
-  const memoryCount =
-    document.getElementById(
-      "memoryCount"
-    );
-
-
-  /* ==========================================
-     MENSAJES
-     ========================================== */
-
-  function addMessage(
-    text,
-    type
-  ) {
-
-    if (welcome) {
-
-      welcome.style.display =
-        "none";
-    }
-
-    const message =
-      document.createElement(
-        "div"
-      );
-
-    message.className =
-      "message " + type;
-
-    message.textContent =
-      text;
-
-    chat.appendChild(message);
-
-    chat.scrollTop =
-      chat.scrollHeight;
-  }
-
-
-  /* ==========================================
-     ENVIAR
-     ========================================== */
-
-  function sendMessage() {
-
-    const text =
-      input.value.trim();
-
-    if (!text) return;
-
-    addMessage(
-      text,
-      "user"
-    );
-
-    input.value = "";
-
-    processMessage(text);
-  }
-
-
-  /* ==========================================
-     PROCESADOR TEMPORAL
-     ========================================== */
-
-  function processMessage(text) {
-
-    const lower =
-      text.toLowerCase();
-
-
-    /* RECORDAR */
-
-    if (
-      lower.startsWith("recuerda ") ||
-      lower.startsWith("recuerda que ") ||
-      lower.startsWith("nexo, recuerda ")
-    ) {
-
-      let memory =
-        text
-          .replace(
-            /^nexo,\s*/i,
-            ""
-          )
-          .replace(
-            /^recuerda que\s+/i,
-            ""
-          )
-          .replace(
-            /^recuerda\s+/i,
-            ""
-          )
-          .trim();
-
-      if (memory.length > 0) {
-
-        if (
-          saveMemory(memory)
-        ) {
-
-          addMessage(
-            "Lo recordaré. 🧠",
-            "nexo"
-          );
-
-        } else {
-
-          addMessage(
-            "No he podido guardar ese recuerdo.",
-            "nexo"
-          );
-        }
-
-        return;
-      }
-    }
-
-
-    /* CONSULTAR */
-
-    if (
-      lower.includes(
-        "qué recuerdas"
-      ) ||
-      lower.includes(
-        "que recuerdas"
-      )
-    ) {
-
-      getMemories(
-        function(memories) {
-
-          if (
-            memories.length === 0
-          ) {
-
-            addMessage(
-              "Todavía no tengo ningún recuerdo guardado.",
-              "nexo"
-            );
-
-            return;
-          }
-
-          let response =
-            "Esto es lo que recuerdo:\n\n";
-
-          memories.forEach(
-            function(memory) {
-
-              response +=
-                "• " +
-                memory.content +
-                "\n";
-            }
-          );
-
-          addMessage(
-            response,
-            "nexo"
-          );
-        }
-      );
-
-      return;
-    }
-
-
-    /* OLVIDAR */
-
-    if (
-      lower.startsWith("olvida ") ||
-      lower.startsWith("olvida que ") ||
-      lower.startsWith("nexo, olvida ")
-    ) {
-
-      let search =
-        text
-          .replace(
-            /^nexo,\s*/i,
-            ""
-          )
-          .replace(
-            /^olvida que\s+/i,
-            ""
-          )
-          .replace(
-            /^olvida\s+/i,
-            ""
-          )
-          .trim();
-
-      deleteMemories(
-        search,
-        function(deleted) {
-
-          if (
-            deleted > 0
-          ) {
-
-            addMessage(
-              "He eliminado " +
-              deleted +
-              " recuerdo(s). 🗑️",
-              "nexo"
-            );
-
-          } else {
-
-            addMessage(
-              "No he encontrado ese recuerdo.",
-              "nexo"
-            );
-          }
-        }
-      );
-
-      return;
-    }
-
-
-    /* ENVIAR A GEMINI */
-
-    askNexo(text);
-  }
-
-
-  /* ==========================================
-     CONEXIÓN CON NEXO / CLOUDFLARE
-     ========================================== */
-
-  async function askNexo(text) {
-
-    addMessage(
-      "NEXO está pensando…",
-      "nexo"
-    );
-
-    try {
-
-      const response = await fetch(
-        "https://nexo-api.electricalmen2003.workers.dev/",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            message: text
-          })
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data?.error || "Error del servidor"
-        );
-      }
-
-      const answer = data?.response;
-
-      if (!answer) {
-        throw new Error(
-          "NEXO no devolvió ninguna respuesta."
-        );
-      }
-
-      const thinkingMessages =
-        chat.querySelectorAll(".nexo");
-
-      if (thinkingMessages.length > 0) {
-        const lastMessage =
-          thinkingMessages[thinkingMessages.length - 1];
-
-        if (
-          lastMessage.textContent ===
-          "NEXO está pensando…"
-        ) {
-          lastMessage.remove();
-        }
-      }
-
-      addMessage(answer, "nexo");
-
-    } catch (error) {
-
-      console.error("NEXO connection error:", error);
-
-      const thinkingMessages =
-        chat.querySelectorAll(".nexo");
-
-      if (thinkingMessages.length > 0) {
-        const lastMessage =
-          thinkingMessages[thinkingMessages.length - 1];
-
-        if (
-          lastMessage.textContent ===
-          "NEXO está pensando…"
-        ) {
-          lastMessage.remove();
-        }
-      }
-
-      addMessage(
-        "No he podido conectar con mi cerebro ahora mismo.",
-        "nexo"
-      );
-    }
-  }
-
-
-  /* ==========================================
-     PANEL DE MEMORIA
-     ========================================== */
-
-  function openMemoryPanel() {
-
-    overlay.classList.add(
-      "visible"
-    );
-
-    refreshMemoryPanel();
-  }
-
-
-  function refreshMemoryPanel() {
-
-    getMemories(
-      function(memories) {
-
-        memoryCount.textContent =
-          memories.length +
-          (
-            memories.length === 1
-              ? " recuerdo"
-              : " recuerdos"
-          );
-
-        memoryList.innerHTML = "";
-
-
-        if (
-          memories.length === 0
-        ) {
-
-          const empty =
-            document.createElement(
-              "div"
-            );
-
-          empty.className =
-            "memory-item";
-
-          empty.textContent =
-            "No tienes recuerdos guardados.";
-
-          memoryList.appendChild(
-            empty
-          );
-
-          return;
-        }
-
-
-        memories.forEach(
-          function(memory) {
-
-            const item =
-              document.createElement(
-                "div"
-              );
-
-            item.className =
-              "memory-item";
-
-            item.textContent =
-              memory.content;
-
-            memoryList.appendChild(
-              item
-            );
-          }
-        );
-      }
-    );
-  }
-
-
-  /* ==========================================
-     EXPORTAR
-     ========================================== */
-
-  function exportMemory() {
-
-    getMemories(
-      function(memories) {
-
-        const data = {
-
-          app: "NEXO",
-
-          version: 1,
-
-          exportedAt:
-            new Date()
-              .toISOString(),
-
-          memories:
-            memories
-        };
-
-
-        const json =
-          JSON.stringify(
-            data,
-            null,
-            2
-          );
-
-
-        const blob =
-          new Blob(
-            [json],
-            {
-              type:
-                "application/json"
-            }
-          );
-
-
-        const url =
-          URL.createObjectURL(
-            blob
-          );
-
-
-        const link =
-          document.createElement(
-            "a"
-          );
-
-
-        link.href =
-          url;
-
-
-        link.download =
-          "NEXO-memoria-" +
-          new Date()
-            .toISOString()
-            .slice(0, 10) +
-          ".json";
-
-
-        link.click();
-
-
-        URL.revokeObjectURL(
-          url
-        );
-      }
-    );
-  }
-
-
-  /* ==========================================
-     IMPORTAR
-     ========================================== */
-
-  function importMemory(file) {
-
-    const reader =
-      new FileReader();
-
-
-    reader.onload =
-      function(event) {
-
-        try {
-
-          const data =
-            JSON.parse(
-              event.target.result
-            );
-
-
-          if (
-            !data.memories ||
-            !Array.isArray(
-              data.memories
-            )
-          ) {
-
             alert(
-              "Este archivo no parece una memoria de NEXO válida."
-            );
-
-            return;
-          }
-
-
-          const transaction =
-            database.transaction(
-              ["memories"],
-              "readwrite"
-            );
-
-
-          const store =
-            transaction.objectStore(
-              "memories"
-            );
-
-
-          data.memories.forEach(
-            function(memory) {
-
-              store.add({
-
-                content:
-                  memory.content,
-
-                createdAt:
-                  memory.createdAt ||
-                  new Date()
-                    .toISOString()
-              });
-            }
-          );
-
-
-          transaction.oncomplete =
-            function() {
-
-              alert(
-                "Memoria importada correctamente. 🧠"
-              );
-
-              refreshMemoryPanel();
-            };
-
-
-        } catch (error) {
-
-          alert(
-            "No se ha podido leer el archivo."
-          );
-        }
-      };
-
-
-    reader.readAsText(
-      file
-    );
-  }
-
-
-  /* ==========================================
-     EVENTOS
-     ========================================== */
-
-  sendButton.addEventListener(
-    "click",
-    sendMessage
-  );
-
-
-  input.addEventListener(
-    "keydown",
-    function(event) {
-
-      if (
-        event.key === "Enter"
-      ) {
-
-        sendMessage();
-      }
-    }
-  );
-
-
-  document
-    .getElementById(
-      "settingsButton"
-    )
-    .addEventListener(
-      "click",
-      openMemoryPanel
-    );
-
-
-  document
-    .getElementById(
-      "closeButton"
-    )
-    .addEventListener(
-      "click",
-      function() {
-
-        overlay.classList.remove(
-          "visible"
-        );
-      }
-    );
-
-
-  document
-    .getElementById(
-      "exportButton"
-    )
-    .addEventListener(
-      "click",
-      exportMemory
-    );
-
-
-  document
-    .getElementById(
-      "importButton"
-    )
-    .addEventListener(
-      "click",
-      function() {
-
-        document
-          .getElementById(
-            "fileInput"
-          )
-          .click();
-      }
-    );
-
-
-  document
-    .getElementById(
-      "fileInput"
-    )
-    .addEventListener(
-      "change",
-      function(event) {
-
-        const file =
-          event.target.files[0];
-
-        if (file) {
-
-          importMemory(
-            file
-          );
-        }
-
-        event.target.value = "";
-      }
-    );
-
-
-  document
-    .getElementById(
-      "deleteAllButton"
-    )
-    .addEventListener(
-      "click",
-      function() {
-
-        const confirmed =
-          confirm(
-            "¿Seguro que quieres borrar TODA la memoria de NEXO? Esta acción no se puede deshacer."
-          );
-
-        if (!confirmed) return;
-
-        deleteAllMemories(
-          function() {
-
-            alert(
-              "Toda la memoria ha sido eliminada."
+              "Memoria importada correctamente. 🧠"
             );
 
             refreshMemoryPanel();
-          }
+
+          };
+
+
+      } catch (error) {
+
+        alert(
+          "No se ha podido leer el archivo."
         );
       }
-    );
+    };
+
+
+  reader.readAsText(
+    file
+  );
+}
+
+
+/* ==========================================
+   EVENTOS
+   ========================================== */
+
+sendButton.addEventListener(
+  "click",
+  sendMessage
+);
+
+
+input.addEventListener(
+  "keydown",
+  function(event) {
+
+    if (
+      event.key === "Enter"
+    ) {
+
+      sendMessage();
+    }
+
+  }
+);
+
+
+document
+  .getElementById(
+    "settingsButton"
+  )
+  .addEventListener(
+    "click",
+    openMemoryPanel
+  );
+
+
+document
+  .getElementById(
+    "closeButton"
+  )
+  .addEventListener(
+    "click",
+    function() {
+
+      overlay.classList.remove(
+        "visible"
+      );
+
+    }
+  );
+
+
+document
+  .getElementById(
+    "exportButton"
+  )
+  .addEventListener(
+    "click",
+    exportMemory
+  );
+
+
+document
+  .getElementById(
+    "importButton"
+  )
+  .addEventListener(
+    "click",
+    function() {
+
+      document
+        .getElementById(
+          "fileInput"
+        )
+        .click();
+
+    }
+  );
+
+
+document
+  .getElementById(
+    "fileInput"
+  )
+  .addEventListener(
+    "change",
+    function(event) {
+
+      const file =
+        event.target.files[0];
+
+      if (file) {
+
+        importMemory(
+          file
+        );
+      }
+
+      event.target.value =
+        "";
+
+    }
+  );
+
+
+document
+  .getElementById(
+    "deleteAllButton"
+  )
+  .addEventListener(
+    "click",
+    function() {
+
+      const confirmed =
+        confirm(
+          "¿Seguro que quieres borrar TODA la memoria de NEXO? Esta acción no se puede deshacer."
+        );
+
+      if (!confirmed) return;
+
+      deleteAllMemories(
+        function() {
+
+          alert(
+            "Toda la memoria ha sido eliminada."
+          );
+
+          refreshMemoryPanel();
+
+        }
+      );
+
+    }
+  );
 
 </script>
 
